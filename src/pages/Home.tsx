@@ -1,35 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import Categories from '../components/Categories';
 import Skeleton from '../components/PizzaBlock/Skeleton';
 import PizzaBlock from '../components/PizzaBlock/PizzaBlock';
 import Sort, { list } from '../components/Sort';
 import Pagination from '../components/Pagination';
 import qs from 'qs';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  selectFilter,
-  setCategoryId,
-  setCurrentPage,
-  setFilters,
-} from '../redux/slices/filterSlice';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useRef } from 'react';
-import { fetchPizzas, selectPizzaData } from '../redux/slices/pizzasSlice';
+import { fetchPizzas } from '../redux/pizza/asyncActions';
+import { useAppDispatch } from '../redux/store';
+import { selectFilter } from '../redux/filter/selector';
+import { selectPizzaData } from '../redux/pizza/selector';
+import { setCategoryId, setCurrentPage, setFilters } from '../redux/filter/slice';
+import { SearchPizzaParams } from '../redux/pizza/types';
 
-const Home = () => {
+const Home: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const isSearch = useRef(false);
   const isMounted = useRef(false);
   const { categoryId, sort, currentPage, searchValue } = useSelector(selectFilter);
   const { items, status } = useSelector(selectPizzaData);
   const sortType = sort.sortProperty;
 
-  const onChangeCategory = (id) => {
+  const onChangeCategory = useCallback((id: number) => {
     dispatch(setCategoryId(id));
-  };
-  const onChangePage = (number) => {
-    dispatch(setCurrentPage(number));
+  }, []);
+  const onChangePage = (page: number) => {
+    dispatch(setCurrentPage(page));
   };
 
   //getting pizzas from BackEnd
@@ -45,14 +44,14 @@ const Home = () => {
         category,
         sortBy,
         order,
-        currentPage,
+        currentPage: String(currentPage),
       }),
     );
 
     window.scrollTo(0, 0);
   };
 
-  // if it's not the first render, put the parameters in URL if [catId....] changed
+  //if it's not the first render, put the parameters in URL if [catId....] changed
   useEffect(() => {
     if (isMounted.current) {
       const queryString = qs.stringify({
@@ -65,16 +64,18 @@ const Home = () => {
     isMounted.current = true;
   }, [categoryId, sort.sortProperty, currentPage]);
 
-  // if was first render, checking URL and save them in redux
+  //if was first render, checking URL and save them in redux
   useEffect(() => {
     if (window.location.search) {
-      const params = qs.parse(window.location.search.substring(1));
-      const sort = list.find((obj) => obj.sortProperty === params.sortProperty);
+      const params = qs.parse(window.location.search.substring(1)) as unknown as SearchPizzaParams;
+      const sort = list.find((obj) => obj.sortProperty === params.sortBy);
 
       dispatch(
         setFilters({
-          ...params,
-          sort,
+          searchValue: params.search,
+          categoryId: Number(params.category),
+          currentPage: Number(params.currentPage),
+          sort: sort || list[0],
         }),
       );
       isSearch.current = true;
@@ -96,14 +97,14 @@ const Home = () => {
     isSearch.current = false;
   }, [categoryId, sort, searchValue, currentPage]);
 
-  const pizzas = items.map((obj, index) => <PizzaBlock key={index} {...obj} />);
+  const pizzas = items.map((obj: any) => <PizzaBlock key={obj.id} {...obj} />);
   const skeletons = [...new Array(8)].map((_, index) => <Skeleton key={index} />);
 
   return (
     <div className="container">
       <div className="content__top">
         <Categories value={categoryId} onChangeCategory={onChangeCategory} />
-        <Sort />
+        <Sort value={sort} />
       </div>
       <h2 className="content__title">All pizzas</h2>
       {status === 'error' ? (

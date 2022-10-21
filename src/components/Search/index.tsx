@@ -1,30 +1,31 @@
-import React from 'react';
 import styles from './Search.module.scss';
 import { useRef } from 'react';
 import debounce from 'lodash.debounce';
 import { useState } from 'react';
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { setSearchValue } from '../../redux/slices/filterSlice';
 
-const Search = () => {
+const Search: React.FC = () => {
   const dispatch = useDispatch();
   const [value, setValue] = useState('');
-  const inputRef = useRef();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const updateSearchValue = useCallback(
-    debounce((str) => {
+    debounce((str: string) => {
       dispatch(setSearchValue(str));
     }, 500),
+    [],
   );
-  const onChangeInput = (event) => {
+  const onChangeInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     setValue(event.target.value);
     updateSearchValue(event.target.value);
   };
   const onCLickClear = () => {
     dispatch(setSearchValue(''));
     setValue('');
-    inputRef.current.focus();
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   return (
@@ -71,7 +72,7 @@ const Search = () => {
       />
       {value && (
         <svg
-          onClick={() => onCLickClear()}
+          onClick={onCLickClear}
           className={styles.clearIcon}
           height="512px"
           id="Layer_1"
@@ -87,3 +88,6 @@ const Search = () => {
 };
 
 export default Search;
+function setSearchValue(str: string): any {
+  throw new Error('Function not implemented.');
+}
